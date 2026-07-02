@@ -501,9 +501,10 @@ a{ color: inherit; }
   margin-top: 28px;
 }
 .portfolio-item{
-  aspect-ratio: 4 / 3;
+  aspect-ratio: 3 / 4;
   border-radius: var(--radius);
   overflow: hidden;
+  background: var(--bg-panel);
 }
 .portfolio-item img, .portfolio-item video{
   width: 100%; height: 100%; object-fit: cover; display: block;

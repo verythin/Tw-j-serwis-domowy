@@ -130,9 +130,9 @@ document.addEventListener('DOMContentLoaded', () => {
     portfolio_eyebrow: { pl: 'REALIZACJE', ua: 'РЕАЛІЗАЦІЇ', en: 'OUR WORK' },
     portfolio_h2: { pl: 'Ostatnie prace.', ua: 'Останні роботи.', en: 'Recent work.' },
     portfolio_note: {
-      pl: 'Zdjęcia i filmy z wykonanych realizacji pojawią się tutaj wkrótce.',
-      ua: "Фото та відео виконаних робіт з'являться тут найближчим часом.",
-      en: 'Photos and videos of completed work will appear here soon.'
+      pl: 'Zdjęcia i filmy z wykonanych realizacji.',
+      ua: 'Фото та відео виконаних робіт.',
+      en: 'Photos and videos from completed jobs.'
     },
     portfolio_placeholder: { pl: 'ZDJĘCIE WKRÓTCE', ua: 'ФОТО НЕЗАБАРОМ', en: 'PHOTO COMING SOON' },
 
