@@ -274,9 +274,111 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
+  /* =========================================================
+     GALERIA REALIZACJI — ładowana automatycznie z folderu
+     /assets w repozytorium GitHub. Żeby dodać nowe zdjęcie/film,
+     wystarczy wrzucić plik do assets/ przez GitHub — nie trzeba
+     nic zmieniać w kodzie. Pliki wideo można sparować z miniaturą,
+     nazywając ją tak samo + "-poster", np.:
+       naprawa-drzwi.mp4
+       naprawa-drzwi-poster.jpg
+     Bez pary "-poster" wideo po prostu nie będzie miało miniatury.
+     ========================================================= */
+  const portfolioGrid = document.getElementById('portfolioGrid');
+  if (portfolioGrid) {
+    const owner  = portfolioGrid.dataset.owner;
+    const repo   = portfolioGrid.dataset.repo;
+    const branch = portfolioGrid.dataset.branch || 'main';
+    const path   = portfolioGrid.dataset.path || 'assets';
+    const cacheKey = 'ms_gallery_cache_v1';
+    const cacheTtlMs = 10 * 60 * 1000; // 10 minut
+
+    const IMAGE_EXT = ['jpg', 'jpeg', 'png', 'webp', 'gif'];
+    const VIDEO_EXT = ['mp4', 'mov', 'webm'];
+
+    function extOf(name) {
+      const i = name.lastIndexOf('.');
+      return i === -1 ? '' : name.slice(i + 1).toLowerCase();
+    }
+    function baseOf(name) {
+      const i = name.lastIndexOf('.');
+      return i === -1 ? name : name.slice(0, i);
+    }
+    // Naturalne sortowanie, żeby "realizacja-2" było przed "realizacja-10"
+    function naturalCompare(a, b) {
+      return a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });
+    }
+
+    function buildGalleryHTML(files) {
+      const byName = {};
+      files.forEach(f => { byName[f.name] = f; });
+
+      const posters = new Set(
+        files.filter(f => baseOf(f.name).endsWith('-poster')).map(f => f.name)
+      );
+
+      const items = files.filter(f => {
+        if (f.type !== 'file') return false;
+        if (posters.has(f.name)) return false; // miniatury nie są osobnym kafelkiem
+        const ext = extOf(f.name);
+        return IMAGE_EXT.includes(ext) || VIDEO_EXT.includes(ext);
+      }).sort((a, b) => naturalCompare(a.name, b.name));
+
+      if (items.length === 0) return null;
+
+      return items.map(item => {
+        const ext = extOf(item.name);
+        if (VIDEO_EXT.includes(ext)) {
+          const posterName = baseOf(item.name) + '-poster.jpg';
+          const poster = byName[posterName] ? byName[posterName].download_url : '';
+          return `<div class="portfolio-item">
+            <video src="${item.download_url}" ${poster ? `poster="${poster}"` : ''} controls preload="metadata" playsinline></video>
+          </div>`;
+        }
+        return `<div class="portfolio-item">
+          <img src="${item.download_url}" alt="Realizacja — Maksymilian, serwis domowy" loading="lazy">
+        </div>`;
+      }).join('');
+    }
+
+    function renderFromCacheIfFresh() {
+      try {
+        const cached = JSON.parse(localStorage.getItem(cacheKey) || 'null');
+        if (cached && (Date.now() - cached.time < cacheTtlMs) && cached.html) {
+          portfolioGrid.innerHTML = cached.html;
+          return true;
+        }
+      } catch (e) { /* ignoruj uszkodzony cache */ }
+      return false;
+    }
+
+    const usedCache = renderFromCacheIfFresh();
+
+    const apiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${path}?ref=${branch}`;
+    fetch(apiUrl, { headers: { Accept: 'application/vnd.github+json' } })
+      .then(res => {
+        if (!res.ok) throw new Error('GitHub API error ' + res.status);
+        return res.json();
+      })
+      .then(files => {
+        const html = buildGalleryHTML(files);
+        if (html) {
+          portfolioGrid.innerHTML = html;
+          try {
+            localStorage.setItem(cacheKey, JSON.stringify({ time: Date.now(), html }));
+          } catch (e) { /* ignoruj — np. tryb prywatny */ }
+        }
+        // jeśli html === null (pusty folder), zostaje to co już jest w DOM
+      })
+      .catch(() => {
+        // Błąd sieci / limit GitHub API — jeśli nie mamy świeżego cache,
+        // zostaje statyczna zawartość wpisana ręcznie w index.html.
+        if (!usedCache) { /* nic nie robimy, fallback z HTML już widoczny */ }
+      });
+  }
+
   // --- Generowanie pierścienia narzędzi wokół odznaki w hero ---
-  const badgeRing = document.getElementById('badgeRing');
-  if (badgeRing) {
+  const badgeRing = document.getElementById('badgeRing');  if (badgeRing) {
     const tools = [
       '<path d="M10 34 L26 18"/><path d="M22 14 L30 22 L26 26 L18 18 Z"/><circle cx="11" cy="35" r="2.6"/>',
       '<line x1="12" y1="34" x2="28" y2="18"/><rect x="26" y="10" width="6" height="10" rx="1" transform="rotate(45 29 15)"/>',
