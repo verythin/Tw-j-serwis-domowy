@@ -331,11 +331,11 @@ document.addEventListener('DOMContentLoaded', () => {
         if (VIDEO_EXT.includes(ext)) {
           const posterName = baseOf(item.name) + '-poster.jpg';
           const poster = byName[posterName] ? byName[posterName].download_url : '';
-          return `<div class="portfolio-item">
+          return `<div class="portfolio-item reveal">
             <video src="${item.download_url}" ${poster ? `poster="${poster}"` : ''} controls preload="metadata" playsinline></video>
           </div>`;
         }
-        return `<div class="portfolio-item">
+        return `<div class="portfolio-item reveal">
           <img src="${item.download_url}" alt="Realizacja — Maksymilian, serwis domowy" loading="lazy">
         </div>`;
       }).join('');
@@ -346,6 +346,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const cached = JSON.parse(localStorage.getItem(cacheKey) || 'null');
         if (cached && (Date.now() - cached.time < cacheTtlMs) && cached.html) {
           portfolioGrid.innerHTML = cached.html;
+          if (typeof observeRevealables === 'function') observeRevealables(portfolioGrid);
           return true;
         }
       } catch (e) { /* ignoruj uszkodzony cache */ }
@@ -364,6 +365,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const html = buildGalleryHTML(files);
         if (html) {
           portfolioGrid.innerHTML = html;
+          if (typeof observeRevealables === 'function') observeRevealables(portfolioGrid);
           try {
             localStorage.setItem(cacheKey, JSON.stringify({ time: Date.now(), html }));
           } catch (e) { /* ignoruj — np. tryb prywatny */ }
@@ -376,6 +378,35 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!usedCache) { /* nic nie robimy, fallback z HTML już widoczny */ }
       });
   }
+
+  /* =========================================================
+     PŁYNNE POJAWIANIE SIĘ PRZY SCROLLU
+     Dotyczy kart usług, kroków pracy, galerii i sekcji kontaktu,
+     a także "rozwijania się" linii-miarki między sekcjami.
+     ========================================================= */
+  const revealObserver = ('IntersectionObserver' in window)
+    ? new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('revealed');
+            revealObserver.unobserve(entry.target);
+          }
+        });
+      }, { threshold: 0.15, rootMargin: '0px 0px -40px 0px' })
+    : null;
+
+  function observeRevealables(root = document) {
+    if (!revealObserver) {
+      // Brak wsparcia dla IntersectionObserver — po prostu pokaż wszystko od razu.
+      root.querySelectorAll('.reveal, .ruler-divider').forEach(el => el.classList.add('revealed'));
+      return;
+    }
+    root.querySelectorAll('.reveal:not(.revealed), .ruler-divider:not(.revealed)').forEach(el => {
+      revealObserver.observe(el);
+    });
+  }
+
+  observeRevealables();
 
   // --- Generowanie pierścienia narzędzi wokół odznaki w hero ---
   const badgeRing = document.getElementById('badgeRing');  if (badgeRing) {
